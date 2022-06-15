@@ -2,9 +2,7 @@
 A concurrent (multi-threaded) Java program and its corresponding Finite State Process (FSP) model to demonstrate a student's bank account where transactions happen concurrently among different parties.
 
 Contents:
-* Java Code
-* FSP Processes
+* [Java Code](https://github.com/Ravindu-97/Concurrent-Programming-Student_Bank_Account/tree/main/src)
+* [FSP Model](https://github.com/Ravindu-97/Concurrent-Programming-Student_Bank_Account/blob/main/BankSystem.lts)
 
 The main method resides in *BankingSystem* class which can be used to run the program.
-
-Markup :  [Named Link](http://www.google.fr/ "Named link title") and http://www.google.fr/ or <http://example.com/>
