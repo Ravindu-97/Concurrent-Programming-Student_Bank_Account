@@ -4,3 +4,5 @@ A concurrent (multi-threaded) Java program and its corresponding Finite State Pr
 Contents:
 * Java Code
 * FSP Processes
+
+The main method resides in *BankingSystem* class which can be used to run the program.
