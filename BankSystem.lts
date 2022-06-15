@@ -1,0 +1,65 @@
+/*
+  Assumptions:
+  	* Grandmother and the loan company can deposit money to the student's account only once (one deposit per each process).
+*/
+
+// Initialising the initial and maximum balances for the student's bank account
+const INITIAL_BALANCE = 0 
+const MAX_BALANCE = 2     // Maximum balance has been set to 2 to reduce the number of states of the FSP machine
+range TRANSACTION_TYPE = 1..2    // Deposit if number 1 or withdraw if number 2
+
+// Grouping the actions of loan company/grandmother pair (depositing parties) and student/university pair (withdrawing parties)
+set LOAN_COMPANY_GRANDMOTHER_ACTIONS = {deposit, withdraw, release, acquireAccount[2]}
+set STUDENT_UNIVERSITY_ACTIONS = {deposit, withdraw, release, acquireAccount[1]}
+
+// Initialising the shared primitive process of the student's bank account with a zero balance('ACCOUNT' process)
+ACCOUNT ( BALANCE = INITIAL_BALANCE ) = ACCOUNT[BALANCE],
+ACCOUNT[ b : INITIAL_BALANCE..MAX_BALANCE ] = (
+	acquireAccount[ t:TRANSACTION_TYPE ] ->  // Synchronised action 'acquireAccount[]' with each primitive process
+	if ( b == 0 && t == 1 )   // Represents each process reading the current balance of the student's bank account
+	then 
+    	( deposit -> release -> newBalance[b+1] -> ACCOUNT[b+1] )  // 'newBalance[]' represents each process updating the balance of the student's bank account
+	else 
+		( when( b == 2 && t == 2 ) withdraw -> release -> newBalance[b-1] -> ACCOUNT[b-1]
+		| when ( b == 1 && t == 2 ) withdraw -> release -> newBalance[b-1] -> ACCOUNT[b-1]
+ 		| when ( b < 2 && t == 1 ) deposit -> release -> newBalance[b+1] -> ACCOUNT[b+1]
+	    | when ( b == 0 && t == 2 ) withdraw -> release -> newBalance[b] -> ACCOUNT[b] )
+).
+
+// Initialising the primitive process of loan company depositing a student loan to the student's bank acount('LOAN_COMPANY' process)
+LOAN_COMPANY( LOAN_COUNT = 1 ) = LOAN_COMPANY[LOAN_COUNT],  // using a process parameter to deposit the loan only once
+LOAN_COMPANY[ count : 1..LOAN_COUNT ] = (
+	acquireAccount[1] -> deposit[count] ->  // 'acquireAccount[1]' passeses a synchronised message to the shared process 'ACCOUNT' indcating the transaction type is a deposit
+		if ( count > 1 )
+		then ( release -> LOAN_COMPANY[count-1] )
+		else ( release -> END ) // Deposit the last loan
+) + LOAN_COMPANY_GRANDMOTHER_ACTIONS / { deposit/deposit[ count:1..LOAN_COUNT ] }.
+
+// Initialising the primitive process of grandmother depositing bithday present money to the student's bank acount('GRANDMOTHER' process)
+GRANDMOTHER( DEPOSIT_COUNT = 1 ) = GRANDMOTHER[DEPOSIT_COUNT],  // using a process parameter to deposit the birthday money only once
+GRANDMOTHER[ count : 1..DEPOSIT_COUNT ] = (
+	acquireAccount[1] -> deposit[count] ->
+		if ( count > 1 )
+		then ( release -> GRANDMOTHER[count-1] )
+		else ( release -> END ) // Deposit the last transaction of birthday money
+) + LOAN_COMPANY_GRANDMOTHER_ACTIONS / { deposit/deposit[ count:1..DEPOSIT_COUNT ] }.
+
+// Initialising the primitive process of university withdrawing course fees from the student's bank account ('UNIVERSITY' process)
+UNIVERSITY( WITHDRAW_COUNT = 1 ) = UNIVERSITY[WITHDRAW_COUNT],
+UNIVERSITY[ count : 1..WITHDRAW_COUNT ] = (
+	acquireAccount[2] -> withdraw -> release -> UNIVERSITY[1] | wait -> UNIVERSITY[1]  // 'acquireAccount[2]' passeses a synchronised message to the shared process 'ACCOUNT' indcating the transaction type is a withdrwal
+) + STUDENT_UNIVERSITY_ACTIONS / { withdraw/withdraw[ count:1..WITHDRAW_COUNT ] }.
+
+// Initialising the primitive process of student withdrawing money from his account to buy a Samsung phone ('STUDENT' process)
+STUDENT( WITHDRAW_COUNT = 1 ) = STUDENT[WITHDRAW_COUNT],
+STUDENT[ count : 1..WITHDRAW_COUNT ] = (
+	acquireAccount[2] -> withdraw -> release -> STUDENT[1] | wait -> STUDENT[1]
+) + STUDENT_UNIVERSITY_ACTIONS / { withdraw/withdraw[ count:1..WITHDRAW_COUNT ] }.
+
+// Initialising the composite process with all the above primitive processes('BANKING_SYSTEM' process)
+|| BANKING_SYSTEM = ( c:LOAN_COMPANY || g:GRANDMOTHER || u:UNIVERSITY || s:STUDENT || {c, g, u, s} :: ACCOUNT ).
+
+
+
+
+
